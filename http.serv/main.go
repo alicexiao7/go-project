@@ -10,13 +10,15 @@ import (
 	"time"
 )
 
+func HelloHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello"))
+}
+
 func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello"))
-	})
+	mux.HandleFunc("/", HandlerHallo)
 
 	serv := http.Server{
 		Addr:    ":8080",
