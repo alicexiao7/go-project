@@ -11,6 +11,10 @@ import (
 )
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	w.Write([]byte("Hello"))
 }
 
@@ -18,7 +22,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", HandlerHallo)
+	mux.HandleFunc("/", HelloHandler)
 
 	serv := http.Server{
 		Addr:    ":8080",
