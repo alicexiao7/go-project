@@ -10,12 +10,26 @@ import (
 	"time"
 )
 
+type HelloDTO struct {
+	Name string
+}
+
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	w.Write([]byte("Hello"))
+	name := r.URL.Query().Get("name")
+
+	dto := HelloDTO{
+		Name: name, //зачем запятая??
+	}
+	if dto.Name != "" {
+		w.Write([]byte("Hello " + dto.Name))
+	} else {
+		w.Write([]byte("Hello"))
+	}
+
 }
 
 func main() {
