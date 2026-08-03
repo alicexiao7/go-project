@@ -24,12 +24,13 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 	dto := HelloDTO{
 		Name: name, //зачем запятая??
 	}
+
 	if dto.Name != "" {
 		w.Write([]byte("Hello " + dto.Name))
-	} else {
-		w.Write([]byte("Hello"))
+		return
 	}
 
+	w.Write([]byte("Hello"))
 }
 
 func main() {
