@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 )
 
 type HelloDTO struct {
 	Name string
+	Age  int
 }
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
@@ -20,17 +22,36 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := r.URL.Query().Get("name")
+	ageS := r.URL.Query().Get("age")
+
+	age := 0
+
+	if ageS != "" {
+		var err error
+		age, err = strconv.Atoi(ageS)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+	}
 
 	dto := HelloDTO{
-		Name: name, //зачем запятая??
+		Name: name,
+		Age:  age,
 	}
 
+	text := "Hello"
 	if dto.Name != "" {
-		w.Write([]byte("Hello " + dto.Name))
-		return
+		text = text + "" + dto.Name
+
 	}
 
-	w.Write([]byte("Hello"))
+	if dto.Age != 0 {
+		text = text + ", age: " + strconv.Itoa(dto.Age)
+
+	}
+
+	w.Write([]byte(text))
 }
 
 func main() {
