@@ -9,11 +9,12 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"encoding/json"
 )
 
 type HelloDTO struct {
-	Name string
-	Age  int
+	Name string json:"name"
+    Age  int    json:"age"
 }
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
@@ -40,23 +41,14 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 		Age:  age,
 	}
 
-	text := "Hello"
-	if dto.Name != "" {
-		text = text + "" + dto.Name
+	
 
-	}
-
-	if dto.Age != 0 {
-		text = text + ", age: " + strconv.Itoa(dto.Age)
-
-	}
-
-	w.Write([]byte(text))
+	json.NewEncoder(w).Encode(dto)
 }
 
 func main() {
 
-	mux := http.NewServeMux()
+	mux := http.NewServeMux()	
 
 	mux.HandleFunc("/", HelloHandler)
 
