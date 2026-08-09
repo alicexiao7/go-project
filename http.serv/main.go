@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -9,12 +10,11 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-	"encoding/json"
 )
 
 type HelloDTO struct {
-	Name string json:"name"
-    Age  int    json:"age"
+	Name string `json:"name"`
+	Age  int    `json:"age"`
 }
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
@@ -41,14 +41,12 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 		Age:  age,
 	}
 
-	
-
 	json.NewEncoder(w).Encode(dto)
 }
 
 func main() {
 
-	mux := http.NewServeMux()	
+	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", HelloHandler)
 
