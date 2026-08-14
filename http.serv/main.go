@@ -18,27 +18,38 @@ type HelloDTO struct {
 }
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	name := r.URL.Query().Get("name")
-	ageS := r.URL.Query().Get("age")
+	var dto HelloDTO
+	switch r.Method {
+	case http.MethodGet:
+		name := r.URL.Query().Get("name")
+		ageS := r.URL.Query().Get("age")
+		age := 0
 
-	age := 0
+		if ageS != "" {
+			var err error
+			age, err = strconv.Atoi(ageS)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+		}
 
-	if ageS != "" {
-		var err error
-		age, err = strconv.Atoi(ageS)
+		dto = HelloDTO{
+			Name: name,
+			Age:  age,
+		}
+	case http.MethodPost:
+		err := json.NewDecoder(r.Body).Decode(&dto)
+
 		if err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
-		}
-	}
 
-	dto := HelloDTO{
-		Name: name,
-		Age:  age,
+		}
+	default:
+
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
