@@ -17,6 +17,57 @@ type HelloDTO struct {
 	Age  int    `json:"age"`
 }
 
+type TaskDTO struct {
+	ID        int    `json:"id"`
+	Title     string `json:"title"`
+	Completed bool   `json:"completed"`
+}
+
+var tasks = make([]TaskDTO, 0)
+var nextID = 1
+
+func TaskHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(tasks)
+
+	case http.MethodPost:
+		var newTask TaskDTO
+		err := json.NewDecoder(r.Body).Decode(&newTask)
+
+		if err != nil {
+			log.Println("decode error:", err)
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+
+		}
+
+		if newTask.Title == "" {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		task := TaskDTO{
+			ID:        nextID,
+			Title:     newTask.Title,
+			Completed: false,
+		}
+
+		tasks = append(tasks, task)
+		nextID += 1
+
+		w.Header().Set("Content-Type", "application/json")
+
+		w.WriteHeader(http.StatusCreated)
+
+		json.NewEncoder(w).Encode(task)
+
+	default:
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+}
+
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
 	var dto HelloDTO
 	switch r.Method {
@@ -62,6 +113,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", HelloHandler)
+	mux.HandleFunc("/tasks", TaskHandler)
 
 	serv := http.Server{
 		Addr:    ":8080",
