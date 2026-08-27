@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+
 	"syscall"
 	"time"
 )
@@ -20,11 +21,78 @@ type HelloDTO struct {
 type TaskDTO struct {
 	ID        int    `json:"id"`
 	Title     string `json:"title"`
-	Completed bool   `json:"completed"`
+	Completed bool   `json:"is_completed"`
 }
 
 var tasks = make([]TaskDTO, 0)
 var nextID = 1
+
+func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+
+		for _, task := range tasks {
+			if task.ID == id {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(task)
+				return
+			}
+		}
+
+		http.Error(w, "Not Found", http.StatusNotFound)
+
+	case http.MethodDelete:
+
+		for i, task := range tasks {
+			if task.ID == id {
+				tasks = append(tasks[:i], tasks[i+1:]...)
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+		}
+
+		http.Error(w, "Not Found", http.StatusNotFound)
+
+	case http.MethodPut:
+
+		var updatedTask TaskDTO
+
+		err = json.NewDecoder(r.Body).Decode(&updatedTask)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+
+		if updatedTask.Title == "" {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		for i, task := range tasks {
+			if task.ID == id {
+				updatedTask.ID = id
+				tasks[i] = updatedTask
+
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(updatedTask)
+				return
+			}
+		}
+
+		http.Error(w, "Not Found", http.StatusNotFound)
+
+	default:
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+}
 
 func TaskHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -44,6 +112,7 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if newTask.Title == "" {
+			log.Println("empty title")
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
@@ -114,6 +183,8 @@ func main() {
 
 	mux.HandleFunc("/", HelloHandler)
 	mux.HandleFunc("/tasks", TaskHandler)
+	mux.HandleFunc("/tasks/", TaskHandler)
+	mux.HandleFunc("/tasks/{id}", TaskByIDHandler)
 
 	serv := http.Server{
 		Addr:    ":8080",
