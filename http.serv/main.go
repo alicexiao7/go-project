@@ -183,7 +183,6 @@ func main() {
 
 	mux.HandleFunc("/", HelloHandler)
 	mux.HandleFunc("/tasks", TaskHandler)
-	mux.HandleFunc("/tasks/", TaskHandler)
 	mux.HandleFunc("/tasks/{id}", TaskByIDHandler)
 
 	serv := http.Server{
