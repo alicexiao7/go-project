@@ -19,9 +19,9 @@ type HelloDTO struct {
 }
 
 type TaskDTO struct {
-	ID        int    `json:"id"`
-	Title     string `json:"title"`
-	Completed bool   `json:"is_completed"`
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	IsCompleted bool   `json:"is_completed"`
 }
 
 var tasks = make([]TaskDTO, 0)
@@ -117,9 +117,9 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		task := TaskDTO{
-			ID:        nextID,
-			Title:     newTask.Title,
-			Completed: false,
+			ID:          nextID,
+			Title:       newTask.Title,
+			IsCompleted: false,
 		}
 
 		tasks = append(tasks, task)
