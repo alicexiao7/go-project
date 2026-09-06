@@ -27,6 +27,15 @@ type TaskDTO struct {
 var tasks = make([]TaskDTO, 0)
 var nextID = 1
 
+func findTaskIndexByID(id int) int {
+	for i, task := range tasks {
+		if task.ID == id {
+			return i
+		}
+	}
+	return -1
+}
+
 func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 
@@ -39,27 +48,27 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 
-		for _, task := range tasks {
-			if task.ID == id {
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(task)
-				return
-			}
+		i := findTaskIndexByID(id)
+
+		if i == -1 {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
 		}
 
-		http.Error(w, "Not Found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(tasks[i])
 
 	case http.MethodDelete:
 
-		for i, task := range tasks {
-			if task.ID == id {
-				tasks = append(tasks[:i], tasks[i+1:]...)
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
+		i := findTaskIndexByID(id)
+
+		if i == -1 {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
 		}
 
-		http.Error(w, "Not Found", http.StatusNotFound)
+		tasks = append(tasks[:i], tasks[i+1:]...)
+		w.WriteHeader(http.StatusNoContent)
 
 	case http.MethodPut:
 
@@ -75,18 +84,18 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		for i, task := range tasks {
-			if task.ID == id {
-				updatedTask.ID = id
-				tasks[i] = updatedTask
+		i := findTaskIndexByID(id)
 
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(updatedTask)
-				return
-			}
+		if i == -1 {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
 		}
 
-		http.Error(w, "Not Found", http.StatusNotFound)
+		updatedTask.ID = id
+		tasks[i] = updatedTask
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(updatedTask)
 
 	default:
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
