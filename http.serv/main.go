@@ -36,6 +36,7 @@ func findTaskIndexByID(id int) int {
 	return -1
 }
 
+
 func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 
@@ -68,6 +69,9 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		tasks = append(tasks[:i], tasks[i+1:]...)
+
+		saveTasks()
+
 		w.WriteHeader(http.StatusNoContent)
 
 	case http.MethodPut:
@@ -94,6 +98,8 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 		updatedTask.ID = id
 		tasks[i] = updatedTask
 
+		saveTasks()
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(updatedTask)
 
@@ -101,6 +107,52 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
+}
+
+func saveTasks() {
+	data, err := json.MarshalIndent(tasks, "", "  ")
+	if err != nil {
+		log.Println("json error:", err)
+		return
+	}
+
+	err = os.WriteFile("tasks.json", data, 0644)
+	if err != nil {
+		log.Println("write file error:", err)
+		return
+	}
+}
+
+func TaskFromFile(){
+	data,err := os.ReadFile("tasks.json")
+	if err != nil{
+		if os.IsNotExist(err) {
+				tasks = make([]TaskDTO, 0)
+				err = os.WriteFile("tasks.json", [] byte("[]"), 0644)
+				if err != nil {
+					log.Println("error file create:", err)
+				return
+			}
+			return
+		}	
+		log.Println("error file read:", err)
+		return
+	}
+	err = json.Unmarshal(data, &tasks)
+
+
+	if err != nil {
+		log.Println("json error:", err)
+		return
+	}
+
+	updateNextID()
+
+	log.Println("tasks loaded:", len(tasks))
+
+
+	
+
 }
 
 func TaskHandler(w http.ResponseWriter, r *http.Request) {
@@ -133,6 +185,8 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 
 		tasks = append(tasks, task)
 		nextID += 1
+
+		saveTasks()
 
 		w.Header().Set("Content-Type", "application/json")
 
@@ -186,7 +240,17 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(dto)
 }
 
+func updateNextID() {
+	nextID = 1
+
+	for _, task := range tasks {
+		if task.ID >= nextID {
+			nextID = task.ID + 1
+		}
+	}
+}
 func main() {
+	TaskFromFile()
 
 	mux := http.NewServeMux()
 
