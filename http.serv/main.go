@@ -8,9 +8,12 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-
+	
 	"syscall"
 	"time"
+
+	"my-go-project/http.serv/internal/model"
+	"my-go-project/http.serv/internal/storage"
 )
 
 type HelloDTO struct {
@@ -18,13 +21,7 @@ type HelloDTO struct {
 	Age  int    `json:"age"`
 }
 
-type TaskDTO struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	IsCompleted bool   `json:"is_completed"`
-}
-
-var tasks = make([]TaskDTO, 0)
+var tasks = make([]model.TaskDTO, 0)
 var nextID = 1
 
 func findTaskIndexByID(id int) int {
@@ -35,7 +32,6 @@ func findTaskIndexByID(id int) int {
 	}
 	return -1
 }
-
 
 func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
@@ -70,13 +66,21 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 		tasks = append(tasks[:i], tasks[i+1:]...)
 
-		saveTasks()
+		err := storage.SaveTasks(tasks)
+		if err != nil {
+			log.Println("save error", err)
+		}
 
-		w.WriteHeader(http.StatusNoContent)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message:" : "delete ok",
+		})
+
 
 	case http.MethodPut:
 
-		var updatedTask TaskDTO
+		var updatedTask model.TaskDTO
 
 		err = json.NewDecoder(r.Body).Decode(&updatedTask)
 		if err != nil {
@@ -98,7 +102,10 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 		updatedTask.ID = id
 		tasks[i] = updatedTask
 
-		saveTasks()
+		err := storage.SaveTasks(tasks)
+		if err != nil {
+			log.Println("save error", err)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(updatedTask)
@@ -109,52 +116,6 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func saveTasks() {
-	data, err := json.MarshalIndent(tasks, "", "  ")
-	if err != nil {
-		log.Println("json error:", err)
-		return
-	}
-
-	err = os.WriteFile("tasks.json", data, 0644)
-	if err != nil {
-		log.Println("write file error:", err)
-		return
-	}
-}
-
-func TaskFromFile(){
-	data,err := os.ReadFile("tasks.json")
-	if err != nil{
-		if os.IsNotExist(err) {
-				tasks = make([]TaskDTO, 0)
-				err = os.WriteFile("tasks.json", [] byte("[]"), 0644)
-				if err != nil {
-					log.Println("error file create:", err)
-				return
-			}
-			return
-		}	
-		log.Println("error file read:", err)
-		return
-	}
-	err = json.Unmarshal(data, &tasks)
-
-
-	if err != nil {
-		log.Println("json error:", err)
-		return
-	}
-
-	updateNextID()
-
-	log.Println("tasks loaded:", len(tasks))
-
-
-	
-
-}
-
 func TaskHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -162,7 +123,7 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(tasks)
 
 	case http.MethodPost:
-		var newTask TaskDTO
+		var newTask model.TaskDTO
 		err := json.NewDecoder(r.Body).Decode(&newTask)
 
 		if err != nil {
@@ -177,7 +138,7 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		task := TaskDTO{
+		task := model.TaskDTO{
 			ID:          nextID,
 			Title:       newTask.Title,
 			IsCompleted: false,
@@ -186,7 +147,10 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 		tasks = append(tasks, task)
 		nextID += 1
 
-		saveTasks()
+		err = storage.SaveTasks(tasks)
+		if err != nil {
+			log.Println("save error", err)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 
@@ -250,7 +214,13 @@ func updateNextID() {
 	}
 }
 func main() {
-	TaskFromFile()
+	var err error
+	tasks, err = storage.LoadTasks()
+	if err != nil {
+		log.Println("Load error:", err)
+		return
+	}
+	updateNextID()
 
 	mux := http.NewServeMux()
 
@@ -290,7 +260,7 @@ func main() {
 
 	defer cancel()
 
-	err := serv.Shutdown(ctx)
+	err = serv.Shutdown(ctx)
 
 	if err != nil {
 		log.Println("shutdown error:", err)
