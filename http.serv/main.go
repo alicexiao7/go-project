@@ -11,10 +11,11 @@ import (
 	
 	"syscall"
 	"time"
-
+    "my-go-project/http.serv/internal/service"
 	"my-go-project/http.serv/internal/model"
 	"my-go-project/http.serv/internal/storage"
 )
+
 
 type HelloDTO struct {
 	Name string `json:"name"`
@@ -23,6 +24,7 @@ type HelloDTO struct {
 
 var tasks = make([]model.TaskDTO, 0)
 var nextID = 1
+var fileStorage = storage.FileStorage{}
 
 func findTaskIndexByID(id int) int {
 	for i, task := range tasks {
@@ -66,7 +68,7 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 		tasks = append(tasks[:i], tasks[i+1:]...)
 
-		err := storage.SaveTasks(tasks)
+		err := fileStorage.SaveTasks(tasks)
 		if err != nil {
 			log.Println("save error", err)
 		}
@@ -102,7 +104,7 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 		updatedTask.ID = id
 		tasks[i] = updatedTask
 
-		err := storage.SaveTasks(tasks)
+		err := fileStorage.SaveTasks(tasks)
 		if err != nil {
 			log.Println("save error", err)
 		}
@@ -132,24 +134,12 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 			return
 
 		}
-
-		if newTask.Title == "" {
-			log.Println("empty title")
+		task, err := service.CreateTask(newTask.Title, fileStorage)
+		
+		 if err != nil{
+			log.Println("create task error:", err)
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
-		}
-		task := model.TaskDTO{
-			ID:          nextID,
-			Title:       newTask.Title,
-			IsCompleted: false,
-		}
-
-		tasks = append(tasks, task)
-		nextID += 1
-
-		err = storage.SaveTasks(tasks)
-		if err != nil {
-			log.Println("save error", err)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -215,7 +205,8 @@ func updateNextID() {
 }
 func main() {
 	var err error
-	tasks, err = storage.LoadTasks()
+	
+	tasks, err = fileStorage.LoadTasks()
 	if err != nil {
 		log.Println("Load error:", err)
 		return

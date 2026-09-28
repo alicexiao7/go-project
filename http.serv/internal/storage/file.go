@@ -8,18 +8,20 @@ import (
 	"my-go-project/http.serv/internal/model"
 )
 
-func SaveTasks(tasks []model.TaskDTO) error {
-	data, err := json.MarshalIndent(tasks, "", "  ")
-	if err != nil {
-		log.Println("json error:", err)
-		return err
-	}
 
-	return os.WriteFile("tasks.json", data, 0644)
+type FileStorage struct{}
 
+func (FileStorage) SaveTasks(tasks []model.TaskDTO) error {
+data, err := json.MarshalIndent(tasks, "", "  ")
+if err != nil {
+	log.Println("json error:", err)
+	return err
 }
 
-func LoadTasks() ([]model.TaskDTO, error) {
+return os.WriteFile("tasks.json", data, 0644)
+
+}
+func (FileStorage) LoadTasks() ([]model.TaskDTO, error) {	
 	data, err := os.ReadFile("tasks.json")
 
 	if err != nil {
